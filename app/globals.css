@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-feature-settings: "palt";
+  }
+  /* iOS Safari の input ズーム防止 */
+  input, textarea, select {
+    font-size: 16px;
+  }
+}
