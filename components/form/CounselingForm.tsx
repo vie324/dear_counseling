@@ -23,6 +23,17 @@ import { cn } from "@/lib/utils";
 
 const TOTAL_STEPS = 7;
 
+// 各ステップに属するフィールド（送信時バリデーション失敗時に該当ステップへ誘導するため）
+const STEP_FIELDS: Record<number, string[]> = {
+  1: ["name", "name_kana", "birth_date", "gender", "phone", "email", "postal_code", "address", "occupation", "height_cm"],
+  2: ["referral_source", "search_keyword", "referrer_name"],
+  3: ["chief_complaint", "visit_purpose"],
+  4: ["concerns", "top_concern", "pain_level", "symptom_duration"],
+  5: ["under_medical_care", "medical_care_detail", "surgery_history", "surgery_detail", "taking_medication", "medication_detail", "has_allergy", "allergy_detail", "pregnancy_history", "postpartum_symptoms", "currently_pregnant"],
+  6: ["current_weight_kg", "target_weight_kg", "max_weight_kg", "max_weight_age", "min_weight_kg", "min_weight_age", "postpartum_weight_change"],
+  7: ["lifestyle", "desired_treatment", "consent_treatment", "consent_privacy", "signature"],
+};
+
 export function CounselingForm({ token }: { token: string }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -100,9 +111,27 @@ export function CounselingForm({ token }: { token: string }) {
     });
   };
 
+  // バリデーション失敗時：不備のある最初のステップへ誘導し、無反応にならないようにする
+  const onInvalid = (errors: Record<string, unknown>) => {
+    const erroredKeys = Object.keys(errors);
+    let firstStep = TOTAL_STEPS;
+    for (let s = 1; s <= TOTAL_STEPS; s++) {
+      if (STEP_FIELDS[s].some((f) => erroredKeys.includes(f))) {
+        firstStep = s;
+        break;
+      }
+    }
+    if (firstStep === 6 && !showSection6) firstStep = 7;
+    setStep(firstStep);
+    setSubmitError(
+      "未入力または不備のある項目があります。赤い印の付いた項目をご確認のうえ、もう一度お試しください。"
+    );
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
         {/* プログレスバー */}
         <ProgressBar step={step} total={TOTAL_STEPS} skipSec6={!showSection6} />
 
@@ -211,7 +240,7 @@ function Section1() {
           <Controller
             name="gender"
             render={({ field }) => (
-              <RadioGroup value={field.value} onValueChange={field.onChange} className="grid grid-cols-3 gap-2">
+              <RadioGroup value={field.value ?? ""} onValueChange={field.onChange} className="grid grid-cols-3 gap-2">
                 {(["female", "male", "other"] as const).map((v) => (
                   <RadioOption key={v} value={v} label={LABELS.gender[v]} />
                 ))}
@@ -260,7 +289,7 @@ function Section2() {
           <Controller
             name="referral_source"
             render={({ field }) => (
-              <RadioGroup value={field.value} onValueChange={field.onChange}>
+              <RadioGroup value={field.value ?? ""} onValueChange={field.onChange}>
                 {Object.entries(LABELS.referral_source).map(([k, v]) => (
                   <RadioOption key={k} value={k} label={v} />
                 ))}
@@ -304,7 +333,7 @@ function Section3() {
           <Controller
             name="visit_purpose"
             render={({ field }) => (
-              <RadioGroup value={field.value} onValueChange={field.onChange}>
+              <RadioGroup value={field.value ?? ""} onValueChange={field.onChange}>
                 {Object.entries(LABELS.visit_purpose).map(([k, v]) => (
                   <RadioOption key={k} value={k} label={v} />
                 ))}
