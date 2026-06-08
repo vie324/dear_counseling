@@ -1,0 +1,12 @@
+/**
+ * ブラウザ（クライアントコンポーネント）用 Supabase クライアント。
+ * 公開可能な anon キーを使う。RLS が効くので閲覧系のみ。
+ */
+import { createBrowserClient } from "@supabase/ssr";
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}

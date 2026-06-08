@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FormError, FormHelp } from "@/components/ui/form-message";
 import { ConcernsSelector } from "@/components/form/ConcernsSelector";
 import { submitCounseling } from "@/app/form/[token]/actions";
+import { initLiff, type LiffProfile } from "@/lib/line/liff";
 import { cn } from "@/lib/utils";
 
 const TOTAL_STEPS = 7;
@@ -27,6 +28,14 @@ export function CounselingForm({ token }: { token: string }) {
   const [step, setStep] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [liffProfile, setLiffProfile] = useState<LiffProfile | null>(null);
+
+  // LINEのリッチメニューからLIFFアプリとして開かれた場合、プロフィールを取得
+  useEffect(() => {
+    initLiff().then((profile) => {
+      if (profile) setLiffProfile(profile);
+    });
+  }, []);
 
   const methods = useForm<CounselingResponse>({
     resolver: zodResolver(CounselingResponseSchema),
@@ -79,7 +88,10 @@ export function CounselingForm({ token }: { token: string }) {
   const onSubmit = (data: CounselingResponse) => {
     setSubmitError(null);
     startTransition(async () => {
-      const result = await submitCounseling(token, data);
+      const result = await submitCounseling(token, data, {
+        lineUserId: liffProfile?.lineUserId ?? null,
+        lineDisplayName: liffProfile?.displayName ?? null,
+      });
       if (result.success) {
         router.push("/thanks");
       } else {
@@ -93,6 +105,14 @@ export function CounselingForm({ token }: { token: string }) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* プログレスバー */}
         <ProgressBar step={step} total={TOTAL_STEPS} skipSec6={!showSection6} />
+
+        {liffProfile && (
+          <div className="flex items-center gap-2 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+            LINE連携済み
+            {liffProfile.displayName ? `：${liffProfile.displayName} 様` : ""}
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 sm:p-8">
           {step === 1 && <Section1 />}
