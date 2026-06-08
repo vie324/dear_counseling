@@ -7,6 +7,25 @@
 
 import { z } from "zod";
 
+/**
+ * 任意の数値入力ヘルパー。
+ * react-hook-form の valueAsNumber は空欄を NaN にするため、
+ * 空文字 / null / undefined / NaN はすべて null に正規化してから検証する。
+ * （これをしないと未入力の数値項目で送信時バリデーションが落ち、
+ *   隠れたステップ上のエラーで送信が無反応になる）
+ */
+const nullableNumber = (build: (n: z.ZodNumber) => z.ZodNumber = (n) => n) =>
+  z.preprocess(
+    (v) =>
+      v === "" ||
+      v === null ||
+      v === undefined ||
+      (typeof v === "number" && Number.isNaN(v))
+        ? null
+        : v,
+    build(z.number()).nullable()
+  );
+
 // ============================================
 // Enum 定義
 // ============================================
@@ -76,7 +95,7 @@ export const Section1Schema = z.object({
   postal_code: z.string().regex(/^\d{3}-?\d{4}$/).optional().or(z.literal("")),
   address: z.string().max(200).optional().or(z.literal("")),
   occupation: z.string().max(100).optional().or(z.literal("")),
-  height_cm: z.number().min(100).max(220).optional().nullable(),
+  height_cm: nullableNumber((n) => n.min(100).max(220)),
 });
 
 // ============================================
@@ -149,7 +168,7 @@ export const ConcernsSchema = z.object({
 export const Section4Schema = z.object({
   concerns: ConcernsSchema,
   top_concern: z.string().min(1, "一番気になるお悩みを入力してください").max(200),
-  pain_level: z.number().int().min(1).max(5).optional().nullable(),
+  pain_level: nullableNumber((n) => n.int().min(1).max(5)),
   symptom_duration: SymptomDurationEnum.optional().nullable(),
 });
 
@@ -174,12 +193,12 @@ export const Section5Schema = z.object({
 // Section 6: 体型・ダイエット（条件付き）
 // ============================================
 export const Section6Schema = z.object({
-  current_weight_kg: z.number().min(20).max(300).optional().nullable(),
-  target_weight_kg: z.number().min(20).max(300).optional().nullable(),
-  max_weight_kg: z.number().min(20).max(300).optional().nullable(),
-  max_weight_age: z.number().int().min(0).max(120).optional().nullable(),
-  min_weight_kg: z.number().min(20).max(300).optional().nullable(),
-  min_weight_age: z.number().int().min(0).max(120).optional().nullable(),
+  current_weight_kg: nullableNumber((n) => n.min(20).max(300)),
+  target_weight_kg: nullableNumber((n) => n.min(20).max(300)),
+  max_weight_kg: nullableNumber((n) => n.min(20).max(300)),
+  max_weight_age: nullableNumber((n) => n.int().min(0).max(120)),
+  min_weight_kg: nullableNumber((n) => n.min(20).max(300)),
+  min_weight_age: nullableNumber((n) => n.int().min(0).max(120)),
   postpartum_weight_change: PostpartumWeightChangeEnum.optional().nullable(),
 });
 
@@ -192,12 +211,15 @@ export const Section7Schema = z.object({
     usual_posture: z.array(PostureEnum).default([]),
     exercise_frequency: ExerciseFreqEnum,
     bowel_movement: BowelEnum,
-    sleep_hours: z.number().min(0).max(24),
+    sleep_hours: z.preprocess(
+      (v) => (v === "" || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+      z.number({ required_error: "睡眠時間を入力してください" }).min(0).max(24)
+    ),
     sleep_quality: z.array(SleepQualityEnum).default([]),
     eating_habit: z.array(EatingHabitEnum).default([]),
     dietary_concerns: z.string().max(500).optional().or(z.literal("")),
     alcohol: AlcoholEnum,
-    water_intake_l: z.number().min(0).max(20).optional().nullable(),
+    water_intake_l: nullableNumber((n) => n.min(0).max(20)),
     supplements: z.string().max(500).optional().or(z.literal("")),
   }),
   desired_treatment: z.array(DesiredTreatmentEnum)
