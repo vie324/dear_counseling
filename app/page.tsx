@@ -19,10 +19,13 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200">
+        <div className="mt-8 pt-6 border-t border-gray-200 space-y-2">
           <p className="text-xs text-gray-400">
             本番版では店舗から個別URLが発行されます
           </p>
+          <Link href="/admin" className="text-xs text-gray-400 hover:text-brand-700 underline">
+            スタッフ管理ページ
+          </Link>
         </div>
       </div>
     </main>
